@@ -30,7 +30,18 @@ module MV = Metavariable
  *)
 
 (*****************************************************************************)
-(* Extended languages and patterns *)
+(* Position information and errors *)
+(*****************************************************************************)
+
+(* similar to what we do in AST_generic *)
+type tok = AST_generic.tok [@@deriving show, eq, hash]
+
+type 'a wrap = 'a AST_generic.wrap [@@deriving show, eq, hash]
+
+exception InvalidLanguageException of string * string
+
+(*****************************************************************************)
+(* Extended languages *)
 (*****************************************************************************)
 
 (* eXtended language, stored in the languages: field in the rule.
@@ -44,7 +55,26 @@ type xlang =
   | LGeneric
 [@@deriving show, eq]
 
-(* eXtended pattern *)
+(* coupling: Parse_mini_rule.parse_languages *)
+let xlang_of_string ?id:(id_opt = None) s =
+  match s with
+  | "none" | "regex" -> LRegex
+  | "generic" -> LGeneric
+  | _ -> (
+      match Lang.lang_of_string_opt s with
+      | None -> (
+          match id_opt with
+          | None -> failwith (Lang.unsupported_language_message s)
+          | Some id ->
+              raise
+                (InvalidLanguageException
+                   (id, Common.spf "unsupported language: %s" s)))
+      | Some l -> L (l, []))
+
+(*****************************************************************************)
+(* Extended patterns *)
+(*****************************************************************************)
+
 type xpattern = {
   pat : xpattern_kind;
   (* Regarding @equal below, even if two patterns have different indentation,
@@ -195,16 +225,16 @@ type taint_spec = {
 
 type mode = Search of pformula | Taint of taint_spec [@@deriving show]
 
+(* TODO? just reuse Error_code.severity *)
+type severity = Error | Warning | Info [@@deriving show]
+
 type rule = {
   (* MANDATORY fields *)
-  id : string;
+  id : string wrap;
   mode : mode;
   message : string;
-  severity : Mini_rule.severity;
+  severity : severity;
   languages : xlang;
-  (* todo: used for error location (metachecker) but should disappear when
-   * using a YAML parser keeping location information and some tok/wrap *)
-  file : string;
   (* OPTIONAL fields *)
   options : Config_semgrep.t option;
   (* deprecated? todo: parse them *)

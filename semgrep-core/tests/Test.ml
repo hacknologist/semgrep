@@ -3,7 +3,8 @@ open Common
 open OUnit
 module E = Error_code
 module P = Pattern_match
-module R = Mini_rule
+module R = Rule
+module MR = Mini_rule
 
 (*****************************************************************************)
 (* Purpose *)
@@ -103,7 +104,7 @@ let regression_tests_for_lang ~with_caching files lang =
     in
     Error_code.g_errors := [];
 
-    let rule = { R.
+    let rule = { MR.
       id = "unit testing"; pattern; message = ""; 
       severity = R.Error; languages = [lang];
       pattern_string = "test: no need for pattern string";
@@ -513,6 +514,7 @@ let test regexp =
       (* just expression vs expression testing for one language (Python) *)
       Unit_matcher.unittest ~any_gen_of_string;
       Unit_synthesizer.unittest;
+      Unit_synthesizer_targets.unittest;
       Unit_dataflow.unittest Parse_target.parse_program;
       Unit_typing_generic.unittest 
         Parse_target.parse_program 
